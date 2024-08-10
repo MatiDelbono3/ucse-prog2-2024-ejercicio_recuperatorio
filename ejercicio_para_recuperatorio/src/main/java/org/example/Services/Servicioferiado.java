@@ -1,10 +1,14 @@
 package org.example.Services;
+
+import org.example.DTO.feriado;
+import org.example.entities.dias;
+import org.example.entities.feriados;
 import org.example.connections.*;
-import jakarta.persistence.Query;
-import org.example.DTO.*;
+import org.example.DTO.diaFeriado;
+import org.example.DTO.contador;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
-import org.hibernate.query.*;
+import org.hibernate.query.Query;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,23 +23,24 @@ public class Servicioferiado {
             transaction = session.beginTransaction();
 
             // Buscar el ID del día en la tabla `Dias`
-            String hqlDia = "SELECT d.id FROM dias d WHERE d.dia = :dia AND d.mes = :mes AND d.anio = :anio";
-            Query queryDia = session.createQuery(hqlDia, Integer.class);
+            String hqlDia = "SELECT d.Id FROM dias d WHERE d.dia = :dia AND d.mes = :mes AND d.anio = :anio";
+            Query<Integer> queryDia = session.createQuery(hqlDia, Integer.class);
             queryDia.setParameter("dia", diaFeriado.getDia());
             queryDia.setParameter("mes", diaFeriado.getMes());
-            queryDia.setParameter("año", diaFeriado.getAnio());
-            Integer idDia = (Integer) queryDia.getSingleResult();
+            queryDia.setParameter("anio", diaFeriado.getAnio());
+            Integer idDia = queryDia.getSingleResult();
 
             if (idDia != null) {
                 // Verificar si ya existe un registro en la tabla de feriados para ese ID de día
-                String hqlFeriado = "SELECT COUNT(f) FROM feriados f WHERE f.idDia = :id";
-                org.hibernate.query.Query<Long> queryFeriado = session.createQuery(hqlFeriado, Long.class);
+                String hqlFeriado = "SELECT COUNT(f) FROM feriados f WHERE f.dia.id = :idDia";
+                Query<Long> queryFeriado = session.createQuery(hqlFeriado, Long.class);
                 queryFeriado.setParameter("idDia", idDia);
-                Long count = queryFeriado.uniqueResult();
+                Long count = queryFeriado.getSingleResult();
 
                 if (count == 0) {
                     // Insertar el nuevo feriado
                     feriado nuevoFeriado = new feriado(idDia);
+                    nuevoFeriado.setId((Integer) session.get(String.valueOf(feriados.class), idDia));
                     session.save(nuevoFeriado);
                     insertado = true;
                 }
@@ -53,26 +58,27 @@ public class Servicioferiado {
 
         return insertado;
     }
-    // Ver si un dia es feriado
+
+    // Ver si un día es feriado
     public boolean esFeriado(diaFeriado diaFeriado) {
         Session session = HibernateUtil.getSession();
         boolean esFeriado = false;
 
         try {
             // Buscar el ID del día en la tabla `Dias`
-            String hqlDia = "SELECT d.id FROM dias d WHERE d.dia = :dia AND d.mes = :mes AND d.anio = :anio";
-            Query queryDia = session.createQuery(hqlDia, Integer.class);
+            String hqlDia = "SELECT d.Id FROM dias d WHERE d.dia = :dia AND d.mes = :mes AND d.anio = :anio";
+            Query<Integer> queryDia = session.createQuery(hqlDia, Integer.class);
             queryDia.setParameter("dia", diaFeriado.getDia());
             queryDia.setParameter("mes", diaFeriado.getMes());
-            queryDia.setParameter("año", diaFeriado.getAnio());
-            Integer idDia = (Integer) queryDia.getSingleResult();
+            queryDia.setParameter("anio", diaFeriado.getAnio());
+            Integer idDia = queryDia.getSingleResult();
 
             if (idDia != null) {
                 // Verificar si existe un registro en la tabla de feriados para ese ID de día
-                String hqlFeriado = "SELECT COUNT(f) FROM feriados f WHERE f.idDia = :id";
-                Query queryFeriado = session.createQuery(hqlFeriado, Long.class);
+                String hqlFeriado = "SELECT COUNT(f) FROM feriados f WHERE f.dia.id = :idDia";
+                Query<Long> queryFeriado = session.createQuery(hqlFeriado, Long.class);
                 queryFeriado.setParameter("idDia", idDia);
-                Long count = (Long) queryFeriado.getSingleResult();
+                Long count = queryFeriado.getSingleResult();
 
                 // Si count es mayor que 0, significa que el día es feriado
                 esFeriado = (count > 0);
@@ -85,28 +91,21 @@ public class Servicioferiado {
 
         return esFeriado;
     }
-    //Cantidad feriados en 1 mes
+
+    // Cantidad de feriados en 1 mes
     public List<contador> obtenerCantidadFeriadosPorMes(int anio) {
         List<contador> contadores = new ArrayList<>();
         Session session = HibernateUtil.getSession();
 
         try {
-            String hql = "SELECT \n" +
-                    "    d.mes AS mes,\n" +
-                    "    COUNT(f.id) AS cantidad\n" +
-                    "FROM \n" +
-                    "    dias d\n" +
-                    "JOIN \n" +
-                    "    feriados f ON d.id = f.dia_trabajo_id\n" +
-                    "WHERE \n" +
-                    "    d.anio = :anio\n" +
-                    "GROUP BY \n" +
-                    "    d.mes\n" +
-                    "ORDER BY \n" +
-                    "    cantidad DESC";
+            String hql = "SELECT d.mes AS mes, COUNT(f.id) AS cantidad " +
+                    "FROM dias d LEFT JOIN feriados f ON d.Id = f.dia.id " +
+                    "WHERE d.anio = :anio " +
+                    "GROUP BY d.mes " +
+                    "ORDER BY cantidad DESC";
 
-            Query query = session.createQuery(hql, Object[].class);
-            query.setParameter("año", anio);
+            Query<Object[]> query = session.createQuery(hql, Object[].class);
+            query.setParameter("anio", anio);
             List<Object[]> results = query.getResultList();
 
             for (Object[] result : results) {

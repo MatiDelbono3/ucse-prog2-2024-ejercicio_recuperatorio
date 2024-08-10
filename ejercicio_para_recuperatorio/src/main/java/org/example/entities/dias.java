@@ -16,8 +16,8 @@ public class dias {
     private int mes;
     @Column(name = "anio")
     private int anio;
-    @OneToMany(mappedBy = "feriado", fetch = FetchType.LAZY)
-    private List<dias> dias;
+    @OneToMany(mappedBy = "dia", fetch = FetchType.LAZY)
+    private List<feriados> feriados;
 
     public int getId() {
         return Id;
@@ -51,11 +51,13 @@ public class dias {
         this.anio = anio;
     }
 
-    public List<org.example.entities.dias> getDias() {
-        return dias;
+    public List<org.example.entities.feriados> getFeriados() {
+        return feriados;
     }
 
-    public void setDias(List<org.example.entities.dias> dias) {
-        this.dias = dias;
+    public void setFeriados(List<org.example.entities.feriados> feriados) {
+        this.feriados = feriados;
     }
+
 }
+

@@ -15,6 +15,9 @@ public class dia {
     public dia(String string, boolean b) {
     }
 
+    public dia(int dayOfMonth, int monthValue, int year, boolean b) {
+    }
+
     public int getId() {
         return id;
     }
